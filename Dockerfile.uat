@@ -7,4 +7,4 @@ COPY --chown=node:node production ./production
 COPY --chown=node:node backend/public ./backend/public
 EXPOSE 8788
 # The entrypoint drops to uid/gid 1000 after preparing the dedicated volume.
-CMD ["node","production/uat-entrypoint.ts"]
+CMD ["node","--max-old-space-size=256","--wasm-num-compilation-tasks=1","production/uat-entrypoint.ts"]

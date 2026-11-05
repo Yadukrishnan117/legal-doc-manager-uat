@@ -25,7 +25,7 @@ jobs:
       - name: Verify container startup within the UAT memory limit
         shell: bash
         run: |
-          docker run -d --name uat-check --memory=1g -p 127.0.0.1:8788:8788 \
+          docker run -d --name uat-check --memory=950m --memory-swap=950m --cpus=1 -p 127.0.0.1:8788:8788 \
             -v uat-check-data:/data \
             -e NODE_ENV=production -e LDM_ENV=uat -e UAT_FICTIONAL_DATA_ONLY=1 \
             -e LDM_RUNTIME=/data/ldm -e APP_ORIGIN=https://uat.example.invalid \
