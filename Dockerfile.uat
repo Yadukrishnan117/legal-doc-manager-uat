@@ -4,7 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --chown=node:node production ./production
+RUN node --input-type=module -e 'import {database} from "./production/database.ts"; const db=await database({mode:"test",path:"/app/uat-empty"}); await db.transaction("chargemod",async c=>{const r=await c.query("SELECT count(*) AS n FROM users"); if(Number(r.rows[0].n))throw new Error("UAT image must contain no accounts");}); await db.close();' && chown -R node:node /app/uat-empty
 COPY --chown=node:node backend/public ./backend/public
 EXPOSE 8788
 # The entrypoint drops to uid/gid 1000 after preparing the dedicated volume.
-CMD ["node","--max-old-space-size=256","--wasm-num-compilation-tasks=1","production/uat-entrypoint.ts"]
+CMD ["node","--max-old-space-size=128","--wasm-num-compilation-tasks=1","production/uat-entrypoint.ts"]
