@@ -1,0 +1,28 @@
+# Indian privacy and security readiness
+
+Reviewed against official sources on **28 October 2026**. This is an engineering readiness note and draft policy input, not legal advice, certification or a complete applicability opinion. Company counsel/privacy owner must approve actual processing purposes, basis, notices, authority, retention, processors and incident procedures before real personal data is used.
+
+## Current versus forthcoming framework
+
+The [DPDP commencement notification G.S.R. 843(E)](https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf) brings the Act into force in phases. Initial provisions include definitions and the Board-related framework; section 6(9) and section 27(1)(d) start one year after Gazette publication, while most operational duties, rights and section 44(2) start eighteen months after publication. These phases fall in November 2026 and May 2027 respectively. On this review date those later phases have not yet arrived. Do not describe every substantive DPDP requirement as already operative. Recheck for further notifications at launch.
+
+The [Rules 2025, G.S.R. 846(E)](https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf) likewise phase rules 1, 2, 17–21 at publication, rule 4 after one year, and rules 3, 5–16, 22–23 after eighteen months. The [December corrigendum G.S.R. 892(E)](https://www.meity.gov.in/static/uploads/2025/12/3c7ebbae0e5456f493f486e6845df86b.pdf) corrects wording and schedule references; it does not itself replace the phased rollout. The [October 2026 removal-of-difficulties order](https://www.meity.gov.in/static/uploads/2026/10/daf495a7b5798a3dfa72a944b51fc176.pdf) clarifies section 9's guardian wording and section 10's data-audit wording; do not treat this as general acceleration of commencement.
+
+Until the relevant repeal takes effect, assess IT Act section 43A and the [SPDI Rules 2011, G.S.R. 313(E)](https://upload.indiacode.nic.in/showfile?actid=AC_CEN_45_76_00001_200021_1517807324077&filename=GSR313E_10511%281%29_0.pdf&type=rule) where applicable to the organization and data categories. The Rules address privacy policy, collection/use, sensitive information, disclosure/transfer and reasonable security. Passwords themselves are sensitive information; avoid collecting financial/health/biometric data or government identifiers by default. Business context alone does not eliminate personal-data considerations.
+
+For covered entities, [CERT-In directions dated 28 April 2022](https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf) require specified reportable cyber incidents to be reported within six hours of noticing or being informed, secure rolling 180-day ICT logs within Indian jurisdiction, time synchronization and a designated contact. This does not set one retention period for every contract, nor does it substitute for future DPDP breach notifications. Applicability and incident classification need the designated security/legal owners. The app does not submit regulatory reports automatically.
+
+## Controls that actually run in the local foundation
+
+- Server-derived identity and organization/department/assignment permissions on reads, searches, downloads, writes and exports; explicit separation between administration and legal access.
+- Named provisioned accounts; scrypt password hashes only for explicit loopback development login. Google protocol implementation requires exact approved hosted domain **chargemod.com**, verified email, signature/claims validation and explicitly linked provisioned subject. Live OAuth has not been tested without credentials.
+- Opaque hashed sessions, HttpOnly/SameSite cookies, CSRF + Origin checks, bounded request sizes, in-process rate limiting, no-cache and browser security headers. Secure cookies and HSTS apply only for HTTPS; current runnable service is loopback HTTP development, not TLS production.
+- Private authenticated downloads, immutable file bytes/hashes, AES-256-GCM document encryption using a restricted local development key, maximum 2 MB PDF/TXT validation. Metadata/database and audit rows are not application-encrypted; no KMS, malware scanner, managed backups or immutable security-log sink is connected.
+- Minimal business contacts, purpose and basis rationale metadata; no Aadhaar/government-ID field. The runtime never stores records or session tokens in browser localStorage. The hosted design preview now keeps only fictional session-memory state.
+- Internal privacy-request intake and Legal Manager review; explicit retention review and legal holds; deletion proposals blocked for active/held/unexpired or unreviewed records. No destructive purge is implemented.
+
+## Required company decisions and operations
+
+Approve legal entity/contact details; privacy/grievance channel, identity verification, response deadlines and escalation; exact lawful basis per purpose (consent is not the only candidate); statutory/contractual retention and litigation holds; approved processors, data access locations and contracts; authority/signature matrix; incident owner and CERT-In point of contact where applicable.
+
+**AWS Mumbai (ap-south-1) is confirmed company deployment policy.** Private RDS, documents, operational/security logs and backups should be provisioned there. This is not a blanket assertion that DPDP mandates India-only hosting for every record. The Sites preview has no verified India residency and must not contain real company data. Google Workspace identity processing and any support/telemetry access need separate data-flow/vendor review. See deployment and inventory notes.

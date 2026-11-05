@@ -1,0 +1,20 @@
+.runtime/
+backend/.runtime/
+outputs/
+*.sqlite*
+.env
+.DS_Store
+
+node_modules/
+production/.runtime/
+*.pem
+
+# Never publish environment credentials or runtime state.
+.env.*
+!.env.example
+!**/.env.example
+*.key
+*.p12
+*.pfx
+*.log
+*.pid

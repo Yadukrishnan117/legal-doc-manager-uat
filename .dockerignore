@@ -1,0 +1,16 @@
+.git
+node_modules
+**/.runtime
+.env
+*.pem
+outputs
+*.zip
+dist
+.openai
+.env.*
+!**/.env.example
+*.key
+*.p12
+*.pfx
+*.log
+*.pid

@@ -1,0 +1,17 @@
+PRAGMA foreign_keys=ON;
+PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, org TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL, departments TEXT NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY, user_id TEXT REFERENCES users(id), csrf TEXT NOT NULL, expires INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS clients(id TEXT NOT NULL, org TEXT NOT NULL, name TEXT NOT NULL, PRIMARY KEY(org,id));
+CREATE TABLE IF NOT EXISTS agreements(id TEXT PRIMARY KEY, org TEXT NOT NULL, dept TEXT NOT NULL, requester TEXT NOT NULL, sales TEXT NOT NULL, ops TEXT NOT NULL, legal TEXT NOT NULL, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, agreement_id TEXT NOT NULL REFERENCES agreements(id), version INTEGER NOT NULL, kind TEXT NOT NULL, filename TEXT NOT NULL, mime TEXT NOT NULL, digest TEXT NOT NULL, bytes BLOB NOT NULL, created TEXT NOT NULL, UNIQUE(agreement_id,version,kind));
+CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, org TEXT NOT NULL, actor TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, decision TEXT NOT NULL, at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS privacy_requests(id TEXT PRIMARY KEY, org TEXT NOT NULL, requester TEXT NOT NULL, kind TEXT NOT NULL, details TEXT NOT NULL, status TEXT NOT NULL, review TEXT NOT NULL, created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS deletion_proposals(id TEXT PRIMARY KEY, agreement_id TEXT NOT NULL REFERENCES agreements(id), proposed_by TEXT NOT NULL, status TEXT NOT NULL, reason TEXT NOT NULL, at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS integration_events(source TEXT NOT NULL, external_id TEXT NOT NULL, event_id TEXT NOT NULL, digest TEXT NOT NULL, org TEXT NOT NULL, agreement_id TEXT, at TEXT NOT NULL, PRIMARY KEY(source,external_id,event_id));
+CREATE TABLE IF NOT EXISTS outbox(id TEXT PRIMARY KEY, org TEXT NOT NULL, event TEXT NOT NULL, agreement_id TEXT NOT NULL, version INTEGER NOT NULL, status TEXT NOT NULL, created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS identities(issuer TEXT NOT NULL, subject TEXT NOT NULL, user_id TEXT NOT NULL REFERENCES users(id), PRIMARY KEY(issuer,subject));
+CREATE TABLE IF NOT EXISTS templates(id TEXT PRIMARY KEY, org TEXT NOT NULL, dept TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, current_version INTEGER NOT NULL DEFAULT 0, published_version INTEGER NOT NULL DEFAULT 0, published_by TEXT, published_at TEXT, active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS template_versions(template_id TEXT NOT NULL REFERENCES templates(id), version INTEGER NOT NULL, filename TEXT NOT NULL, mime TEXT NOT NULL, digest TEXT NOT NULL, bytes BLOB NOT NULL, created TEXT NOT NULL, actor TEXT NOT NULL, PRIMARY KEY(template_id,version));
+CREATE TABLE IF NOT EXISTS agreement_starts(org TEXT NOT NULL, lead_ref TEXT NOT NULL, template_id TEXT NOT NULL, agreement_id TEXT NOT NULL REFERENCES agreements(id), request_hash TEXT NOT NULL DEFAULT '', PRIMARY KEY(org,lead_ref,template_id));
+CREATE TABLE IF NOT EXISTS template_publications(template_id TEXT NOT NULL REFERENCES templates(id), version INTEGER NOT NULL, actor TEXT NOT NULL, evidence TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY(template_id,version));

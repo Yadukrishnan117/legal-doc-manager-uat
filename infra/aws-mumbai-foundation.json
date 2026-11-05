@@ -1,0 +1,21 @@
+{
+  "AWSTemplateFormatVersion":"2010-09-09",
+  "Description":"Legal Doc Manager by 72BPM - REVIEW ONLY Mumbai data foundation. Not connected to the development SQLite application. Creates billable infrastructure only when explicitly deployed.",
+  "Parameters":{
+    "VpcId":{"Type":"AWS::EC2::VPC::Id"},
+    "PrivateSubnetIds":{"Type":"List<AWS::EC2::Subnet::Id>","Description":"At least two approved private subnets across Mumbai availability zones"},
+    "ApplicationSecurityGroupId":{"Type":"AWS::EC2::SecurityGroup::Id","Description":"Approved future application compute security group"}
+  },
+  "Rules":{"MumbaiOnly":{"Assertions":[{"Assert":{"Fn::Equals":[{"Ref":"AWS::Region"},"ap-south-1"]},"AssertDescription":"Deploy only in approved Mumbai region ap-south-1"}]}},
+  "Resources":{
+    "DataKey":{"Type":"AWS::KMS::Key","DeletionPolicy":"Retain","UpdateReplacePolicy":"Retain","Properties":{"EnableKeyRotation":true,"Description":"LDM Mumbai data encryption - restrict administrators after security review","KeyPolicy":{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":{"Fn::Sub":"arn:${AWS::Partition}:iam::${AWS::AccountId}:root"}},"Action":"kms:*","Resource":"*"}]}}},
+    "DatabaseSubnets":{"Type":"AWS::RDS::DBSubnetGroup","Properties":{"DBSubnetGroupDescription":"Approved private Mumbai database subnets","SubnetIds":{"Ref":"PrivateSubnetIds"}}},
+    "DatabaseSecurityGroup":{"Type":"AWS::EC2::SecurityGroup","Properties":{"GroupDescription":"PostgreSQL ingress from app security group only","VpcId":{"Ref":"VpcId"},"SecurityGroupIngress":[{"IpProtocol":"tcp","FromPort":5432,"ToPort":5432,"SourceSecurityGroupId":{"Ref":"ApplicationSecurityGroupId"}}]}},
+    "Database":{"Type":"AWS::RDS::DBInstance","DeletionPolicy":"Snapshot","UpdateReplacePolicy":"Snapshot","Properties":{"Engine":"postgres","DBInstanceClass":"db.t4g.micro","AllocatedStorage":"20","StorageType":"gp3","StorageEncrypted":true,"KmsKeyId":{"Fn::GetAtt":["DataKey","Arn"]},"MasterUsername":"ldmbootstrap","ManageMasterUserPassword":true,"MasterUserSecret":{"KmsKeyId":{"Fn::GetAtt":["DataKey","Arn"]}},"DBName":"legaldocmanager","DBSubnetGroupName":{"Ref":"DatabaseSubnets"},"VPCSecurityGroups":[{"Ref":"DatabaseSecurityGroup"}],"PubliclyAccessible":false,"MultiAZ":true,"BackupRetentionPeriod":7,"DeletionProtection":true,"CopyTagsToSnapshot":true,"EnableCloudwatchLogsExports":["postgresql","upgrade"]}},
+    "PrivateDocuments":{"Type":"AWS::S3::Bucket","DeletionPolicy":"Retain","UpdateReplacePolicy":"Retain","Properties":{"BucketEncryption":{"ServerSideEncryptionConfiguration":[{"ServerSideEncryptionByDefault":{"SSEAlgorithm":"aws:kms","KMSMasterKeyID":{"Fn::GetAtt":["DataKey","Arn"]}},"BucketKeyEnabled":true}]},"PublicAccessBlockConfiguration":{"BlockPublicAcls":true,"BlockPublicPolicy":true,"IgnorePublicAcls":true,"RestrictPublicBuckets":true},"OwnershipControls":{"Rules":[{"ObjectOwnership":"BucketOwnerEnforced"}]},"VersioningConfiguration":{"Status":"Enabled"},"Tags":[{"Key":"DataRegionPolicy","Value":"ap-south-1"}] }},
+    "DocumentsTLS":{"Type":"AWS::S3::BucketPolicy","Properties":{"Bucket":{"Ref":"PrivateDocuments"},"PolicyDocument":{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Principal":"*","Action":"s3:*","Resource":[{"Fn::GetAtt":["PrivateDocuments","Arn"]},{"Fn::Sub":"${PrivateDocuments.Arn}/*"}],"Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}}},
+    "SecurityLogs":{"Type":"AWS::Logs::LogGroup","DeletionPolicy":"Retain","UpdateReplacePolicy":"Retain","Properties":{"RetentionInDays":180}},
+    "ApplicationLogs":{"Type":"AWS::Logs::LogGroup","DeletionPolicy":"Retain","UpdateReplacePolicy":"Retain","Properties":{"RetentionInDays":30}}
+  },
+  "Outputs":{"DatabaseEndpoint":{"Value":{"Fn::GetAtt":["Database","Endpoint.Address"]}},"DocumentBucket":{"Value":{"Ref":"PrivateDocuments"}},"DatabaseSecretArn":{"Value":{"Fn::GetAtt":["Database","MasterUserSecret.SecretArn"]}},"SecurityLogGroup":{"Value":{"Ref":"SecurityLogs"}}}
+}

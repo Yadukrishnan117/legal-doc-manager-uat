@@ -1,0 +1,11 @@
+ALTER TABLE users ADD COLUMN deleted_at TEXT;
+ALTER TABLE users ADD COLUMN password_enabled INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN password_expires BIGINT;
+ALTER TABLE users ADD COLUMN account_revision INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE account_controls(org TEXT PRIMARY KEY);
+ALTER TABLE account_controls ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_controls FORCE ROW LEVEL SECURITY;
+CREATE POLICY org_scope ON account_controls USING(org=current_setting('app.org',true)) WITH CHECK(org=current_setting('app.org',true));
+CREATE INDEX users_directory ON users(org,deleted_at,active,role);
+ALTER TABLE sessions ADD COLUMN auth_method TEXT NOT NULL DEFAULT 'password';

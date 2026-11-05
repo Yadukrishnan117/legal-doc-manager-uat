@@ -1,0 +1,57 @@
+import http from 'node:http';
+import {readFileSync,mkdirSync,existsSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {randomBytes,createHmac,timingSafeEqual} from 'node:crypto';
+import {createStore,Fault,fail,digest,id,now,required} from './core.ts';
+import {googleOIDC} from './oidc.ts';
+export function createApplication(options:any){
+ const {store,origin,google={},integration={}}=options;const secure=origin.startsWith('https:'),oidc=googleOIDC(google),attempts=new Map<string,any>();
+ function rate(key:string,limit=180){const t=Date.now(),v=attempts.get(key)||{count:0,until:t+60000};if(v.until<t){v.count=0;v.until=t+60000}v.count++;attempts.set(key,v);if(attempts.size>10000)for(const [k,v] of attempts)if(v.until<t)attempts.delete(k);if(v.count>limit)fail(429,'Too many requests. Try again in a minute.')}
+ const cookie=(name:string,value:string,age:number,strict=true)=>`${name}=${value}; HttpOnly; SameSite=${strict?'Strict':'Lax'}; Path=/; Max-Age=${age}${secure?'; Secure':''}`;
+ return http.createServer(async(req,res)=>{const url=new URL(req.url||'/',origin);let actor:any=null;const json=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data))};
+ res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");if(secure)res.setHeader('Strict-Transport-Security','max-age=31536000');
+ const cookies=Object.fromEntries((req.headers.cookie||'').split(';').filter(Boolean).map(x=>x.trim().split('=')));
+ try{
+ if(req.headers.host!==new URL(origin).host)fail(403,'Unexpected host');rate(req.socket.remoteAddress||'unknown');
+ let b:any={},rawBody='';if(!['GET','HEAD'].includes(req.method||'')){let length=0;const chunks=[];for await(const chunk of req){length+=chunk.length;if(length>3*1024*1024)fail(413,'Request exceeds 3 MB');chunks.push(chunk)}rawBody=Buffer.concat(chunks).toString();try{b=JSON.parse(rawBody||'{}')}catch{fail(400,'Expected JSON request')}if(!b||Array.isArray(b)||typeof b!=='object')fail(400,'Expected JSON object')}
+ if(url.pathname==='/api/auth/config'&&req.method==='GET')return json(200,{workspace:'ChargeMOD',passwordLogin:options.passwordLogin===true,googleConfigured:!!(google.clientId&&google.clientSecret),production:false});
+ if(url.pathname==='/api/integration/events'&&req.method==='POST'){
+ if(!integration.secret||!integration.org||!integration.source)fail(503,'Integration identity not configured');const timestamp=String(req.headers['x-event-timestamp']||''),sig=String(req.headers['x-event-signature']||''),payload=rawBody;if(Math.abs(Date.now()-Number(timestamp))>300000||!/^\d+$/.test(timestamp)||!/^[a-f0-9]{64}$/.test(sig))fail(401,'Invalid integration signature');const expected=createHmac('sha256',integration.secret).update(timestamp+'.'+payload).digest();if(!timingSafeEqual(Buffer.from(sig,'hex'),expected))fail(401,'Invalid integration signature');if(!['lead.created','deal.closed'].includes(b.type))fail(400,'Unsupported event');const ext=required(b.externalId,'external record ID',100),eid=required(b.eventId,'event ID',100),hash=digest(payload);const prior=store.one('SELECT * FROM integration_events WHERE source=? AND external_id=? AND event_id=?',integration.source,ext,eid);if(prior){if(prior.digest!==hash)fail(409,'Event ID reused with changed payload');return json(200,{status:'already_received',eventId:eid})}store.sql('INSERT INTO integration_events VALUES(?,?,?,?,?,?,?)',integration.source,ext,eid,hash,integration.org,null,now());store.audit({org:integration.org,id:'integration:'+integration.source},'integration:accepted',eid);return json(202,{status:'pending_mapping_review',eventId:eid,message:'Envelope accepted; no legal ticket created until mapping adapter is implemented.'})}
+ if(req.method==='GET'&&url.pathname==='/auth/google'){const start=oidc.start();res.setHeader('Set-Cookie',cookie('ldm_oidc',start.state,300,false));res.writeHead(302,{Location:start.url});res.end();return}
+ if(req.method==='GET'&&url.pathname==='/auth/google/callback'){const claims=await oidc.finish(url.searchParams.get('state')||'',url.searchParams.get('code')||'',cookies.ldm_oidc||'');const identity=store.one('SELECT user_id FROM identities WHERE issuer=? AND subject=?','https://accounts.google.com',claims.sub);if(!identity)fail(403,'This Workspace identity has not been provisioned by your administrator.');const u=store.user(identity.user_id);if(!u?.active)fail(403,'Account is inactive');const token=randomBytes(32).toString('base64url'),csrf=randomBytes(24).toString('base64url');store.sql('INSERT INTO sessions VALUES(?,?,?,?)',digest(token),u.id,csrf,Date.now()+8*3600000);store.audit(u,'google:login',u.id);res.setHeader('Set-Cookie',[cookie('ldm_session',token,28800),cookie('ldm_oidc','',0,false)]);res.writeHead(302,{Location:'/'});res.end();return}
+ if(req.method==='POST'&&url.pathname==='/api/login'){if(req.headers.origin!==origin)fail(403,'Same-origin request required');if(options.passwordLogin!==true)fail(403,'Use Google Workspace sign-in');rate('login:'+req.socket.remoteAddress,10);const session=store.login(required(b.user,'account',100),required(b.password,'password',200));res.setHeader('Set-Cookie',cookie('ldm_session',session.token,28800));return json(200,{user:session.user,csrf:session.csrf})}
+ if(url.pathname.startsWith('/api/')){
+ const session=store.session(cookies.ldm_session||'');if(!session){store.audit({id:'anonymous',org:'security'},'http:unauthenticated',url.pathname,'deny');fail(401,'Sign in to continue')};actor=session.user;if(!['GET','HEAD'].includes(req.method||'')&&(req.headers.origin!==origin||req.headers['x-csrf-token']!==session.csrf))fail(403,'Request verification failed. Refresh and retry.');
+ const u=actor,p=url.pathname,m=req.method;
+ if(p==='/api/templates'&&m==='GET')return json(200,store.templateList(u,url.searchParams.get('department')||''));
+ if(p==='/api/templates'&&m==='POST')return json(201,store.templateCreate(u,b));
+ const libraryRoute=p.match(/^\/api\/templates\/([a-f0-9]+)\/(versions|publish|download|start)$/);
+ if(libraryRoute){const [,tid,action]=libraryRoute;if(m==='POST'&&action==='versions')return json(201,store.templateUpload(u,tid,b));if(m==='POST'&&action==='publish')return json(200,store.templatePublish(u,tid,b));if(m==='POST'&&action==='start')return json(201,store.fromTemplate(u,tid,b));if(m==='GET'&&action==='download'){const raw=url.searchParams.get('version');const d=store.templateDownload(u,tid,raw?Number(raw):undefined);res.writeHead(200,{'Content-Type':d.mime,'Content-Disposition':'attachment; filename="'+d.filename+'"'});res.end(d.bytes);return}}
+ if(p==='/api/me'&&m==='GET')return json(200,{user:u,csrf:session.csrf,developmentOnly:true,passwordLogin:options.passwordLogin===true});
+ if(p==='/api/logout'&&m==='POST'){store.logout(cookies.ldm_session);res.setHeader('Set-Cookie',cookie('ldm_session','',0));return json(200,{ok:true})}
+ if(p==='/api/colleagues'&&m==='GET')return json(200,store.colleagues(u,url.searchParams.get('department')||''));
+ if(p==='/api/clients'&&m==='GET'){const clientIds=new Set(store.list(u,'',url.searchParams.get('department')||'').map((r:any)=>r.clientId));return json(200,store.all('SELECT id,name FROM clients WHERE org=?',u.org).filter((c:any)=>clientIds.has(c.id)))}
+ if(p==='/api/agreements'&&m==='GET')return json(200,store.list(u,url.searchParams.get('q')||'',url.searchParams.get('department')||''));
+ if(p==='/api/agreements'&&m==='POST')return json(201,store.create(u,b));
+ if(p==='/api/export'&&m==='GET'){if(!['legal_manager','auditor'].includes(u.role)){store.audit(u,'export','agreements','deny');fail(403,'Export requires Legal Manager or scoped auditor')}const rows=store.list(u,'',url.searchParams.get('department')||'');store.audit(u,'export','agreements');res.setHeader('Content-Disposition','attachment; filename="legal-doc-manager-export.json"');return json(200,rows)}
+ if(p==='/api/privacy'&&m==='GET')return json(200,store.privacy(u));if(p==='/api/privacy'&&m==='POST')return json(201,store.privacy(u,b));
+ if(p==='/api/audit'&&m==='GET')return json(200,store.audits(u,url.searchParams.get('department')||''));
+ if(p==='/api/users'&&m==='GET'){if(u.role!=='admin')fail(403,'Administrator only');store.audit(u,'users:list','users');return json(200,store.all('SELECT id,name,role,departments,active FROM users WHERE org=?',u.org))}
+ let match;if((match=p.match(/^\/api\/users\/([a-zA-Z0-9@._-]+)$/))&&m==='PATCH')return json(200,store.admin(u,match[1],b));
+ if((match=p.match(/^\/api\/privacy\/([a-f0-9]+)$/))&&m==='PATCH')return json(200,store.reviewPrivacy(u,match[1],b));
+ if((match=p.match(/^\/api\/agreements\/([a-f0-9]+)$/))&&m==='GET')return json(200,store.get(u,match[1]));
+ if((match=p.match(/^\/api\/agreements\/([a-f0-9]+)\/documents$/))&&m==='POST')return json(201,store.upload(u,match[1],b));
+ if((match=p.match(/^\/api\/agreements\/([a-f0-9]+)\/actions\/([a-z]+)$/))&&m==='POST')return json(200,store.transition(u,match[1],match[2],b));
+ if((match=p.match(/^\/api\/agreements\/([a-f0-9]+)\/deletion-proposals$/))&&m==='POST')return json(201,store.deletion(u,match[1],b));
+ if((match=p.match(/^\/api\/documents\/([a-f0-9]+)$/))&&m==='GET'){const doc=store.download(u,match[1]);res.writeHead(200,{'Content-Type':doc.mime,'Content-Disposition':'attachment; filename="'+doc.filename+'"'});res.end(doc.bytes);return}
+ fail(404,'Route not found')
+ }
+ if(req.method==='GET'&&['/','/app.js','/admin.js','/style.css'].includes(url.pathname)){const filename=url.pathname==='/'?'index.html':url.pathname.slice(1);res.writeHead(200,{'Content-Type':filename.endsWith('.js')?'text/javascript':filename.endsWith('.css')?'text/css':'text/html'});res.end(readFileSync(new URL('./public/'+filename,import.meta.url)));return}fail(404,'Page not found')
+ }catch(e:any){const status=e instanceof Fault?e.status:500;if(actor&&status===403)store.audit(actor,'http:forbidden',url.pathname,'deny');json(status,{error:status===500?'Unexpected server error. No operation was confirmed.':e.message})}
+ });
+}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+ if(process.env.NODE_ENV!=='development')throw new Error('Production disabled: this local SQLite foundation requires deployment hardening and approved PostgreSQL/S3 adapters. Set NODE_ENV=development for loopback only.');
+ const root=resolve(process.env.LDM_RUNTIME||'backend/.runtime');const config=JSON.parse(readFileSync(root+'/config.json','utf8'));const port=Number(process.env.PORT||8787),origin=`http://127.0.0.1:${port}`;const store=createStore(root+'/legal.sqlite',Buffer.from(config.key,'hex'));const server=createApplication({store,origin,passwordLogin:process.env.DEV_PASSWORD_LOGIN==='1',google:{clientId:process.env.GOOGLE_CLIENT_ID,clientSecret:process.env.GOOGLE_CLIENT_SECRET,domain:process.env.GOOGLE_WORKSPACE_DOMAIN||'chargemod.com',redirectUri:process.env.GOOGLE_REDIRECT_URI},integration:{secret:process.env.ERP_WEBHOOK_SECRET,source:process.env.ERP_SOURCE,org:process.env.ERP_ORG}});server.listen(port,'127.0.0.1',()=>console.log('Legal Doc Manager by 72BPM · DEVELOPMENT ONLY · '+origin));
+}

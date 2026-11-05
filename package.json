@@ -1,0 +1,31 @@
+{
+  "name": "legal-doc-manager-by-72bpm",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.12"
+  },
+  "scripts": {
+    "start": "node production/runtime.ts",
+    "setup": "node backend/manage.ts init",
+    "user": "node backend/manage.ts user",
+    "test": "node --test backend/test/*.test.ts production/test/*.test.ts",
+    "provision": "node backend/provision.ts",
+    "start:legacy": "node backend/server.ts",
+    "start:dev": "NODE_ENV=development node production/runtime.ts",
+    "user:production": "node production/manage.ts user",
+    "migrate:production": "node production/manage.ts migrate",
+    "test:production": "node --test production/test/*.test.ts",
+    "test:all": "node --test backend/test/*.test.ts production/test/*.test.ts",
+    "test:legacy": "node --test backend/test/*.test.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1162.0",
+    "@electric-sql/pglite": "^0.5.15",
+    "jose": "^6.2.15",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
