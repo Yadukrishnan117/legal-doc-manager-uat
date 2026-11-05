@@ -1,6 +1,6 @@
 # Railway UAT release — 5 November 2026
 
-GitHub: private repository `Yadukrishnan117/legal-doc-manager-uat`. Railway project `Legal Doc Manager UAT`, environment `uat`, single application service in Singapore (`asia-southeast1-eqsg3a`), with a dedicated 500 MB volume at `/data`. URL allocated: `https://legal-doc-manager-uat-uat.up.railway.app`; a live deployment and smoke checks must be confirmed separately below.
+GitHub: private repository `Yadukrishnan117/legal-doc-manager-uat`. Railway project `Legal Doc Manager UAT`, environment `uat`, single application service in Singapore (`asia-southeast1-eqsg3a`), with a dedicated 500 MB volume at `/data`. Live UAT: https://legal-doc-manager-uat-uat.up.railway.app. Read the verification and account limitations below.
 
 This is an isolated fictional-data UAT. It does not contain the local database, uploaded files, encryption key or accounts. Production remains the separate AWS Mumbai design with verified PostgreSQL/S3/KMS/ClamAV and company SSO requirements. Railway Singapore is not India hosting; never use real client, personal or contract data in this UAT.
 
@@ -22,6 +22,10 @@ Before calling this UAT live, verify the deployment is healthy, `/health/ready` 
 
 ## Status
 
-Repository and Railway resources are created. Source upload, CI, application deployment and public smoke checks are in progress. No local credentials or real data were transferred.
+Live deployment verified on 5 November 2026. Private repository source, all 29 tests, dependency audit, Docker build and actual container startup passed GitHub CI. The constrained container check uses 950 MiB, one CPU and no swap. Fresh initdb exceeds the account memory cap, so the image includes a migrated empty database with zero accounts, copied atomically on first start to `/data/ldm/postgres-uat-v1`. Bootstrap credentials and keys are supplied only at runtime. Existing databases are preserved on subsequent starts. Node heap and WebAssembly compilation concurrency are bounded.
+
+Initial verified runtime commit: `a85e2e07b6802bad555db07f9bd06e32f4ac9b59`; Railway deployment `473d2cfd-db93-4f6c-924c-71c11ab3c38c` succeeded. Public readiness returned 200, auth configuration identifies UAT, anonymous `/api/me` returns 401, temporary administrator login succeeds with Secure/HttpOnly `__Host-` cookies, and workspace APIs reject access until the password changes. Full role/workflow authorization tests pass in CI; full live human acceptance testing remains to be performed. The bootstrap password variable was cleared for subsequent deployments after initialization. No local credentials or real data were transferred.
+
+The Railway dashboard currently shows a trial with 9 days or $5 credit remaining. Continued hosting requires a suitable funded plan; this is not a guarantee of indefinite uptime. This UAT accepts fictional TXT fixtures only and is hosted in Singapore, not India. It is not approved for production or real client records.
 
 References: [GitHub Pages limitation](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages), [Railway regions](https://docs.railway.com/deployments/regions), [Railway volume permissions](https://docs.railway.com/volumes/reference#caveats).
