@@ -17,5 +17,14 @@ if(!existsSync(databasePath)){
  cpSync('/app/uat-empty',staging,{recursive:true,errorOnExist:true,force:false});
  renameSync(staging,databasePath);
 }
+// Preserve a private, closed-database snapshot before migration 3 is first run.
+// Railway's single attached volume is handed over after the old container stops.
+const beforeRecovery='/data/ldm/backups/before-recovery-codes';
+if(!existsSync(beforeRecovery)){
+ mkdirSync('/data/ldm/backups',{recursive:true,mode:0o700});
+ const staging=beforeRecovery+'.prepare-'+process.pid;
+ cpSync(databasePath,staging,{recursive:true,errorOnExist:true,force:false});
+ renameSync(staging,beforeRecovery);
+}
 const {startRuntime}=await import('./runtime.ts');
 await startRuntime();

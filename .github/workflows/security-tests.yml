@@ -13,6 +13,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - run: node --check backend/public/app.js && node --check backend/public/admin.js
       - run: npm run test:all
       - run: npm audit --omit=dev --audit-level=high
 

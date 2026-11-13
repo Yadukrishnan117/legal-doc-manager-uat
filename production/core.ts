@@ -55,7 +55,7 @@ export function createStore(db: any, objects: any, scanner: any) {
         fail(401, 'Invalid account or password.');
     } const token = randomBytes(32).toString('base64url'), csrf = randomBytes(24).toString('base64url'); await sql('INSERT INTO sessions(token_hash,user_id,csrf,expires) VALUES(?,?,?,?)', digest(token), uid, csrf, Date.now() + 8 * 3600000); await audit(await user(uid), 'login', uid); return { token, csrf, user: await user(uid) }; }
     async function session(token: string) { const s = await one("SELECT * FROM sessions WHERE token_hash=? AND expires>? AND last_seen>extract(epoch from now())*1000-1800000", digest(token), Date.now()); if (!s)
-        return null; await sql('UPDATE sessions SET last_seen=? WHERE token_hash=?',Date.now(),digest(token)); const u = await user(s.user_id); if(s.auth_method==='google'&&u){u.mustChangePassword=false;u.passwordExpires=null} return u?.active&&!u.deleted_at&&(!u.passwordExpires||u.passwordExpires>Date.now()) ? { user: u, csrf: s.csrf } : null; }
+        return null; await sql('UPDATE sessions SET last_seen=? WHERE token_hash=?',Date.now(),digest(token)); const u = await user(s.user_id); if(s.auth_method==='google'&&u){u.mustChangePassword=false;u.passwordExpires=null} return u?.active&&!u.deleted_at&&(!u.passwordExpires||u.passwordExpires>Date.now()) ? { user: u, csrf: s.csrf, authMethod:s.auth_method } : null; }
     async function list(u: User, q = '', department = '') {
         if (department && !u.departments.includes(department)) await deny(u, 'department:filter', department);
         const records = (await all('SELECT * FROM agreements WHERE org=?',u.org)).filter(r=>canRead(u,r)&&(!department||r.dept===department));

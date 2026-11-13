@@ -6,6 +6,7 @@ import { randomBytes, createHmac, timingSafeEqual } from 'node:crypto';
 import { createStore, Fault, fail, digest, id, now, required } from './core.ts';
 import { googleOIDC } from './oidc.ts';
 import {accountLock,userDirectory,createUser,editUser,removeUser,userCredentials,changePassword} from './users.ts';
+import {recoveryCodeStatus,generateRecoveryCodes,resetWithRecoveryCode} from './password-recovery.ts';
 export function createApplication(options: any) {
     const { origin, google = {}, integration = {} } = options;
     google.org=options.org;
@@ -111,6 +112,12 @@ export function createApplication(options: any) {
                 res.setHeader('Set-Cookie', cookie(sessionName, session.token, 28800));
                 return json(200, { user: session.user, csrf: session.csrf });
             }
+            if(req.method==='POST'&&url.pathname==='/api/password-recovery'){
+                if(req.headers.origin!==origin)fail(403,'Same-origin request required');
+                const result=await resetWithRecoveryCode(store,b,options);
+                res.setHeader('Set-Cookie',cookie(sessionName,'',0));
+                return json(200,result);
+            }
             if (url.pathname.startsWith('/api/')) {
                 if(!['GET','HEAD'].includes(req.method||'')&&(url.pathname.startsWith('/api/users')||url.pathname==='/api/password'))await accountLock(store,options.org);
                 const session = await store.session(cookies[sessionName] || '');
@@ -125,6 +132,11 @@ export function createApplication(options: any) {
                 const u = actor, p = url.pathname, m = req.method;
                 const localPasswords=options.passwordLogin===true&&!options.production;
                 if(u.mustChangePassword&&!['/api/me','/api/logout','/api/password'].includes(p))fail(403,'Change your temporary password before entering the workspace.');
+                if(p==='/api/recovery-codes'&&m==='GET')return json(200,await recoveryCodeStatus(store,u,options));
+                if(p==='/api/recovery-codes'&&m==='POST'){
+                    if(session.authMethod!=='password')fail(403,'Use your password session to manage UAT recovery codes.');
+                    return json(200,await generateRecoveryCodes(store,u,b,options));
+                }
                 if(p==='/api/password'&&m==='POST'){const result=await changePassword(store,u,b,localPasswords);res.setHeader('Set-Cookie',cookie(sessionName,'',0));return json(200,result)}
                 if (p === '/api/templates' && m === 'GET')
                     return json(200, await store.templateList(u, url.searchParams.get('department') || ''));
@@ -222,7 +234,7 @@ export function createApplication(options: any) {
         let ended = false;
         const output = { setHeader: (k: string, v: any) => { headers[k] = v; }, writeHead: (n: number, h: any = {}) => { status = n; Object.assign(headers, h); }, end: (data: any = '') => { body = data; ended = true; } };
         try {
-            const loginAttempt=req.url?.startsWith('/api/login')||req.url?.startsWith('/auth/google');
+            const loginAttempt=req.url?.startsWith('/api/login')||req.url?.startsWith('/auth/google')||req.url?.startsWith('/api/password-recovery')||(req.method==='POST'&&req.url?.startsWith('/api/recovery-codes'));
             await options.database.transaction(options.org,async(db:any)=>{
                 const key=digest((loginAttempt?'login:':'request:')+(req.socket.remoteAddress||'unknown')+':'+Math.floor(Date.now()/60000));
                 await db.query('DELETE FROM rate_limits WHERE expires<?',[Date.now()]);

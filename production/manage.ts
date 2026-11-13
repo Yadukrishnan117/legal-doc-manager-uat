@@ -8,7 +8,7 @@ import {updateAccess} from './access.ts';
 if(process.argv[2]==='migrate'){
  if(!process.env.MIGRATION_DATABASE_URL||!process.env.DATABASE_CA_FILE)throw new Error('Migration owner URL and verified database CA file required.');
  const client=new pg.Client({connectionString:process.env.MIGRATION_DATABASE_URL,ssl:{ca:readFileSync(process.env.DATABASE_CA_FILE,'utf8'),rejectUnauthorized:true}});await client.connect();
- try{await migrate({query:(q:string)=>client.query(q),exec:(q:string)=>client.query(q)});console.log('Migrations through version 2 applied. Grant the separate runtime role privileges using the deployment guide.')}finally{await client.end()}
+ try{await migrate({query:(q:string)=>client.query(q),exec:(q:string)=>client.query(q)});console.log('Migrations through version 3 applied. Grant the separate runtime role privileges using the deployment guide.')}finally{await client.end()}
 }else if(process.argv[2]==='access'){
  const c=configuration(),input=JSON.parse(readFileSync(0,'utf8')),db=await database(c.db);try{await db.transaction(c.org,async conn=>updateAccess(createStore(conn,{},{}),c.org,input));console.log('Approved role, departments and status updated; all account sessions revoked.')}finally{await db.close()}
 }else if(process.argv[2]==='user'){

@@ -42,7 +42,7 @@ export async function editUser(store:any,actor:any,uid:string,input:any){
 }
 export async function removeUser(store:any,actor:any,uid:string,input:any){
  admin(actor);await accountLock(store,actor.org);independent(actor,uid);const row=await target(store,actor,uid);revision(row,input);assert(!row.deleted_at,409,'This account is already removed.');const note=reason(input);await retainAdmin(store,actor,row,row.role,false);
- await store.sql('UPDATE users SET active=0,deleted_at=?,password_enabled=0,must_change_password=0,password_expires=NULL,hash=?,account_revision=account_revision+1 WHERE id=?',now(),randomBytes(64).toString('hex'),uid);
+ await store.sql('UPDATE users SET active=0,deleted_at=?,password_enabled=0,must_change_password=0,password_expires=NULL,recovery_codes=\'[]\',hash=?,account_revision=account_revision+1 WHERE id=?',now(),randomBytes(64).toString('hex'),uid);
  await store.sql('DELETE FROM sessions WHERE user_id=?',uid);await store.sql('DELETE FROM identities WHERE user_id=?',uid);await log(store,actor,'users:removed',uid,note);return {id:uid,removed:true,message:'Account removed and sign-in revoked. Agreement ownership and audit history are preserved.'};
 }
 export async function userCredentials(store:any,actor:any,uid:string,input:any,localPasswords:boolean){
@@ -52,7 +52,7 @@ export async function userCredentials(store:any,actor:any,uid:string,input:any,l
  let secret=null,expires=null;
  if(input.action==='reset-password'){
   assert(localPasswords,403,'Production passwords are managed through Google Workspace.');assert(row.active,409,'Activate this account before issuing a temporary password.');secret=temporary();expires=Date.now()+24*3600000;const salt=randomBytes(16).toString('hex');
-  await store.sql('UPDATE users SET salt=?,hash=?,password_enabled=1,must_change_password=1,password_expires=? WHERE id=?',salt,scryptSync(secret,salt,64).toString('hex'),expires,uid);
+  await store.sql('UPDATE users SET salt=?,hash=?,password_enabled=1,must_change_password=1,recovery_codes=\'[]\',password_expires=? WHERE id=?',salt,scryptSync(secret,salt,64).toString('hex'),expires,uid);
  }else if(input.action==='link-google'){
   assert(input.identityVerified===true,400,'Confirm independent verification of the Google identity.');const subject=required(input.googleSubject,'verified Google subject',200);const existing=await store.one('SELECT user_id FROM identities WHERE issuer=? AND subject=?','https://accounts.google.com',subject);assert(!existing||existing.user_id===uid,409,'This Google identity is already linked to another account.');await store.sql('DELETE FROM identities WHERE user_id=?',uid);await store.sql('INSERT INTO identities VALUES(?,?,?)','https://accounts.google.com',subject,uid);
  }else if(input.action==='unlink-google'){await store.sql('DELETE FROM identities WHERE user_id=?',uid)}

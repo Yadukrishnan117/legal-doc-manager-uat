@@ -29,3 +29,14 @@ Initial verified runtime commit: `a85e2e07b6802bad555db07f9bd06e32f4ac9b59`; Rai
 The Railway dashboard currently shows a trial with 9 days or $5 credit remaining. Continued hosting requires a suitable funded plan; this is not a guarantee of indefinite uptime. This UAT accepts fictional TXT fixtures only and is hosted in Singapore, not India. It is not approved for production or real client records.
 
 References: [GitHub Pages limitation](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages), [Railway regions](https://docs.railway.com/deployments/regions), [Railway volume permissions](https://docs.railway.com/volumes/reference#caveats).
+
+
+## Self-service administrator recovery — 13 November 2026
+
+UAT administrators can open **Account security**, confirm their current password and generate ten recovery codes. Codes appear once and can be downloaded privately. Replacing the set invalidates all previous codes. Keep the file in a password manager, outside the workspace; a code authorizes a password reset. The operator/assistant does not enroll or retain the administrator's codes.
+
+The login page's **Forgot password?** form accepts an account ID, one unused saved recovery code and a new password of at least 14 characters. A successful reset consumes that code atomically, clears temporary-password expiry, requires ordinary sign-in with the chosen password and revokes all sessions. Unknown, inactive, removed and non-administrator accounts cannot use this flow. Code values are random 160-bit secrets; only SHA-256 hashes bound to the user ID are stored, with organization RLS and transaction locking. Recovery and enrollment are throttled, same-origin requests are required, enrollment requires the current password plus session CSRF, and secrets never enter audit payloads. Account removal or another administrator's password reset invalidates saved codes.
+
+This is UAT only. Production recovery stays with Google Workspace. There is no reset-by-account-name endpoint and no email delivery dependency. If both password and all recovery codes are lost, a trusted operator must verify identity and recover access.
+
+Migration 3 adds the recovery-code hash column without altering existing records or grants. Before starting the new runtime, the UAT entrypoint makes an atomic, private copy of the closed database at `/data/ldm/backups/before-recovery-codes` on the attached volume. The old container must stop before volume handoff. This local snapshot does not replace off-platform backups or a restore drill. Production requires migration 3 through the separate migration owner.
