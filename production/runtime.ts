@@ -5,6 +5,7 @@ import {database} from './database.ts';
 import {objectStorage,clamAV,uatTextScanner} from './storage.ts';
 import {createApplication} from './server.ts';
 import {createStore,departments} from './core.ts';
+import {recoverUatAdmin} from './uat-recovery.ts';
 export function configuration(env:any=process.env){
  const uat=env.LDM_ENV==='uat',production=!uat&&env.NODE_ENV==='production',hosted=production||uat;
  const root=resolve(env.LDM_RUNTIME||'production/.runtime'),port=Number(env.PORT||8788),org='chargemod';
@@ -32,7 +33,7 @@ export async function bootstrapUat(db:any,c:any,env:any=process.env){
 }
 export async function startRuntime(env:any=process.env){
  const c=configuration(env),db=await database(c.db),objects=objectStorage(c.storage),scanner=c.uat?uatTextScanner():clamAV(c.scan);
- try{await objects.assertReady();await scanner.assertReady();await bootstrapUat(db,c,env)}catch(e){await db.close();throw e}
+ try{await objects.assertReady();await scanner.assertReady();await bootstrapUat(db,c,env);await recoverUatAdmin(db,c,env)}catch(e){await db.close();throw e}
  const server=createApplication({...c,database:db,objects,scanner});
  server.requestTimeout=20000;server.headersTimeout=10000;server.keepAliveTimeout=5000;
  server.listen(c.port,c.hosted?'0.0.0.0':'127.0.0.1',()=>console.log(`Legal Doc Manager by 72BPM · ${c.uat?'UAT · FICTIONAL TXT DATA ONLY':c.production?'PRODUCTION':'DEVELOPMENT'} · ${c.origin}`));
