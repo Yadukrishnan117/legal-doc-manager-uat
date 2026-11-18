@@ -2,6 +2,19 @@
 
 This is the GitHub-hosted replacement for the paused Railway UAT. It runs the full login, administrator management, department RBAC, common-draft workflow and recovery-code features. Use fictional TXT documents only. Production approval and India hosting remain separate requirements.
 
+## Created UAT workspace — 18 November 2026
+
+- Codespace: [refactored space journey](https://github.com/codespaces/refactored-space-journey-jj746w4r77q4359r4)
+- Private application: https://refactored-space-journey-jj746w4r77q4359r4-8788.app.github.dev/
+- Machine: 2 cores, 8 GB RAM. Port 8788 remains Private.
+- Account: `uat.admin`; initial password is in `.runtime/codespaces/refactored-space-journey-jj746w4r77q4359r4/first-login.txt` inside this Codespace. No password or key is included in this guide.
+
+The full 34-test suite and GitHub build checks passed for source `0c33533ec5c20c17e717a7c04ee39585d61c84a8`. Through authenticated private HTTP forwarding, database readiness and administrator login returned 200; password change was required; sign-out returned 200. Anonymous account and recovery-code access returned 401. The same private settings and database survived Codespace shutdown/resume. The verification tunnel was closed afterward; no SSH server was added.
+
+**Current network access limitation:** this computer's configured DNS resolver returned REFUSED for the private preview hostname; an independent DNS lookup resolved the GitHub tunnel normally. Chrome therefore could not open the private application preview on this network during handoff. The app itself is healthy. Ask the network administrator to permit the required `app.github.dev` preview domain, or access it on an approved network where it resolves. No DNS settings, security filters or port visibility were changed.
+
+The Codespace uses a 30-minute idle timeout and a 30-day retention period as reported by GitHub at handoff. Resume it from the Codespace link when stopped. Retention/deletion removes test data; keep your own private backups. This is a fresh UAT workspace, not a migration of the paused Railway volume.
+
 ## Open your private UAT
 
 1. Open the private repository in GitHub, select **Code → Codespaces → Create codespace on main**. Choose the smallest machine meeting 2 CPUs and 4 GB memory. Review the account's included usage and billing controls before creating it.
