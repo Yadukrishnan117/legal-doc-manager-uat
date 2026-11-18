@@ -1,3 +1,7 @@
+# Hosting transition — 18 November 2026
+
+The user selected GitHub Codespaces for private UAT. See [Codespaces UAT](CODESPACES_UAT.md) for automatic startup, private-port access, new credentials, persistence and availability limits. Railway remains offline after its trial expired. The following is the historical Railway release record, not a claim that its URL is currently live.
+
 # Railway UAT release — 5 November 2026
 
 GitHub: private repository `Yadukrishnan117/legal-doc-manager-uat`. Railway project `Legal Doc Manager UAT`, environment `uat`, single application service in Singapore (`asia-southeast1-eqsg3a`), with a dedicated 500 MB volume at `/data`. Live UAT: https://legal-doc-manager-uat-uat.up.railway.app. Read the verification and account limitations below.

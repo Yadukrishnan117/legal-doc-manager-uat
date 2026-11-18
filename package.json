@@ -17,7 +17,8 @@
     "migrate:production": "node production/manage.ts migrate",
     "test:production": "node --test production/test/*.test.ts",
     "test:all": "node --test backend/test/*.test.ts production/test/*.test.ts",
-    "test:legacy": "node --test backend/test/*.test.ts"
+    "test:legacy": "node --test backend/test/*.test.ts",
+    "start:codespaces": "node production/codespaces.ts start"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1162.0",

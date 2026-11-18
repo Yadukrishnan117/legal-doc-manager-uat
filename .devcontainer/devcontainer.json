@@ -1,0 +1,13 @@
+{
+  "name": "Legal Doc Manager by 72BPM — Private UAT",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": { "ghcr.io/devcontainers/features/node:1": { "version": "24" } },
+  "hostRequirements": { "cpus": 2, "memory": "4gb", "storage": "16gb" },
+  "forwardPorts": [8788],
+  "portsAttributes": { "8788": { "label": "Legal Doc Manager UAT", "onAutoForward": "notify", "protocol": "http" } },
+  "postCreateCommand": "npm ci",
+  "postStartCommand": "node production/codespaces.ts start",
+  "postAttachCommand": "node production/codespaces.ts info",
+  "remoteUser": "vscode",
+  "customizations": { "codespaces": { "openFiles": ["docs/CODESPACES_UAT.md"] } }
+}

@@ -1,3 +1,7 @@
+# GitHub-hosted private UAT
+
+Open this repository in GitHub Codespaces to run the full application. [UAT setup and access](docs/CODESPACES_UAT.md) explains automatic startup and the private login file. Railway is paused; its old URL is unavailable.
+
 # Legal Doc Manager by 72BPM
 
 ChargeMOD's legal operations application. The new authenticated runtime is in `production/`; the static Sites URL is a separate fictional design demo and must never hold company records. Its last observed audience was public. No production deployment or real Google sign-in has been verified.
