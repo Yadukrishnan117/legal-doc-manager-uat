@@ -26,7 +26,7 @@ export function createApplication(options: any) {
             res.setHeader('Strict-Transport-Security', 'max-age=31536000');
         const cookies = Object.fromEntries((req.headers.cookie || '').split(';').filter(Boolean).map(x => x.trim().split('=')));
         try {
-            if (req.headers.host !== new URL(origin).host && !(options.uat&&req.headers.host==='healthcheck.railway.app'&&req.method==='GET'&&['/health/live','/health/ready'].includes(url.pathname)))
+            if (req.headers.host !== new URL(origin).host && !(options.codespaces===true&&options.uat===true&&!options.production&&['localhost','127.0.0.1','[::1]','localhost:'+options.port,'127.0.0.1:'+options.port,'[::1]:'+options.port].includes(req.headers.host)) && !(options.uat&&req.headers.host==='healthcheck.railway.app'&&req.method==='GET'&&['/health/live','/health/ready'].includes(url.pathname)))
                 fail(403, 'Unexpected host');
             
             let b: any = {}, rawBody = '';
