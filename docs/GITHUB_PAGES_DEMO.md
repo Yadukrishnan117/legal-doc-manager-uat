@@ -8,18 +8,15 @@ The backend source remains in this same repository for future development. The P
 
 ## Publishing status
 
-GitHub rejected Pages creation for the existing private repository with HTTP 422: “Your current plan does not support GitHub Pages for this repository.” The repository has not been made public. No live Pages URL has been verified yet.
+**Published:** https://yadukrishnan117.github.io/legal-doc-manager-uat/
 
-Resolve this by activating a GitHub plan that supports Pages from private repositories, or explicitly approving publication of the entire repository and its history. Publishing a website does not by itself authorize exposing all repository source.
+The owner explicitly authorized making the entire repository and history public after GitHub rejected Pages for the private repository on the current plan. Before the change, Gitleaks 8.30.1 scanned all 14 commits and found no detected secrets; a separate history path check found no runtime databases, keys or credential files. No scanner can guarantee absence of every possible secret.
 
-Once eligible:
+The repository is now public. Pages uses GitHub Actions and HTTPS. Deployment run 44502627535 succeeded and the live public demo was verified in Chrome on 19 November 2026.
 
-1. In repository Settings → Pages, select **GitHub Actions** as the source.
-2. In Actions, select **Publish GitHub Pages workflow demo** and run it on `main`.
-3. Wait for the deployment to succeed and use the URL returned by the workflow.
-4. Test all three team views and a sample workflow from another device/network.
+For updates: edit `pages-demo/`, then run **Publish GitHub Pages workflow demo** on `main` in Actions. Only that directory is uploaded. Review the workflow's returned URL and verify it after deployment.
 
-The expected default project-site address is `https://yadukrishnan117.github.io/legal-doc-manager-uat/`; this is an expected address, not proof of publication. Updates are published deliberately using Run workflow.
+No backend or secure authentication has been deployed by this workflow. Requests for a sign-in screen must preserve the distinction between demo role simulation and real server-enforced authentication.
 
 ## Custom domain later
 
