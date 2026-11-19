@@ -2,7 +2,7 @@
 
 ## Scope
 
-The owner approved a static demo on 19 November 2026. `pages-demo/index.html` contains fictional, browser-tab-only Sales, Legal Manager and Operations workflows. The team selector is a simulation, not authentication or secure RBAC. No passwords, database, API or real client documents are included. Reload or Reset demo restores the fictional sample records.
+The owner approved a static demo on 19 November 2026. `pages-demo/index.html` contains fictional, browser-tab-only Sales, Legal Manager and Operations workflows. The team selector is a simulation, not authentication or secure RBAC. No real passwords, database, API or client documents are included. Public sample credentials drive the demo sign-in only. Reload or Reset demo restores the fictional sample records.
 
 The backend source remains in this same repository for future development. The Pages workflow uploads **only `pages-demo/`**; it does not publish backend files, repository documentation or runtime secrets as website assets. This does not make repository source private if the repository itself is later made public.
 
@@ -16,7 +16,15 @@ The repository is now public. Pages uses GitHub Actions and HTTPS. Deployment ru
 
 For updates: edit `pages-demo/`, then run **Publish GitHub Pages workflow demo** on `main` in Actions. Only that directory is uploaded. Review the workflow's returned URL and verify it after deployment.
 
-No backend or secure authentication has been deployed by this workflow. Requests for a sign-in screen must preserve the distinction between demo role simulation and real server-enforced authentication.
+No backend or secure authentication has been deployed by this workflow. The owner selected demo sign-in. Use these public sample accounts:
+
+| Team | Account | Demo password |
+| --- | --- | --- |
+| Sales | sales.demo | Demo72BPM! |
+| Legal Manager | legal.demo | Demo72BPM! |
+| Operations | operations.demo | Demo72BPM! |
+
+The entry screen opens the matching dashboard and hides the team selector. Switch team / sign out returns to the entry screen while retaining this tab's fictional workflow so testers can follow handoffs. Reload ends the demo session and restores sample records. This is browser-side simulation, not secure RBAC. Do not use real account passwords.
 
 ## Custom domain later
 

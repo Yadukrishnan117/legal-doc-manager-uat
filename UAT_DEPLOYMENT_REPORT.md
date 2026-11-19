@@ -47,9 +47,13 @@ At the owner's request, the former Codespaces port was made private and the Code
 
 ## Future secure application
 
-GitHub Pages serves static files. Real password verification, sessions, enforced role/department access, shared workflows and encrypted document storage require a backend. Adding a custom domain changes the address; it does not add those capabilities. The current request for a login screen is awaiting clarification between demo sign-in and a real backend deployment.
+GitHub Pages serves static files. Real password verification, sessions, enforced role/department access, shared workflows and encrypted document storage require a backend. Adding a custom domain changes the address; it does not add those capabilities. The owner subsequently chose demo sign-in for this version. Public sample accounts open the matching Sales, Legal Manager or Operations dashboard. Invalid demo credentials show an error; sign-out permits switching teams, and reload ends the tab-only demo session. These are simulations, not protected user accounts.
 
 References:
 - https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages
 - https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
 - https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site
+
+## Demo login update
+
+Added a demo entry page with public sample accounts and matching dashboards. Local browser checks covered invalid credentials, all three account-to-dashboard mappings, sign-out and reload. Sample passwords are intentionally public and are unrelated to the former authenticated UAT credentials. See the demo guide for account details. The same Pages workflow publishes this update; no backend or custom domain was added.
