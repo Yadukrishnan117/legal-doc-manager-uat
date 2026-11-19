@@ -8,11 +8,17 @@ test('Codespaces preview host rewriting is allowed only for validated Codespaces
  try{
   const settings=codespacesSettings(env,dir),c=configuration(settings.env);assert.equal(c.codespaces,true);assert.equal(configuration({...settings.env,CODESPACES:''}).codespaces,false);assert.equal(configuration({...settings.env,APP_ORIGIN:'https://other.invalid'}).codespaces,false);
   server=createApplication({...c,port:18897,database:db,objects:{},scanner:{}});await new Promise<void>(r=>server.listen(18897,'127.0.0.1',r));
-  const request=(host:string,path='/api/auth/config',method='GET',origin?:string)=>new Promise<number>((resolve,reject)=>{const req=http.request({hostname:'127.0.0.1',port:18897,agent:false,path,method,headers:{Host:host,...(origin?{Origin:origin}:{})}},res=>{res.resume();resolve(res.statusCode!)});req.on('error',reject);req.end(method==='POST'?'{}':undefined)});
+  const request=(host:string,path='/api/auth/config',method='GET',origin?:string,site?:string)=>new Promise<number>((resolve,reject)=>{const req=http.request({hostname:'127.0.0.1',port:18897,agent:false,path,method,headers:{Host:host,...(origin?{Origin:origin}:{}),...(site?{'Sec-Fetch-Site':site}:{})}},res=>{res.resume();resolve(res.statusCode!)});req.on('error',reject);req.end(method==='POST'?'{}':undefined)});
   for(const host of ['localhost:18897','127.0.0.1:18897','localhost'])assert.equal(await request(host),200);
   assert.equal(await request('attacker.invalid'),403);assert.equal(await request('localhost.attacker.invalid'),403);assert.equal(await request('localhost:99'),403);
   assert.equal(await request('localhost:18897','/api/login','POST','https://attacker.invalid'),403);
+  // Valid proxy-origin requests reach body validation; unsafe origins are rejected first.
+  assert.equal(await request('localhost:18897','/api/login','POST','http://localhost:18897','same-origin'),400);
+  for(const site of [undefined,'cross-site','same-site','none'])assert.equal(await request('localhost:18897','/api/login','POST','http://localhost:18897',site),403);
+  for(const origin of ['http://localhost:99','https://attacker.invalid','null'])assert.equal(await request('localhost:18897','/api/login','POST',origin,'same-origin'),403);
+  assert.equal(await request('localhost:18897','/api/password-recovery','POST','http://localhost:18897','cross-site'),403);
   await new Promise<void>(r=>server.close(r));server=null;
-  server=createApplication({...c,codespaces:false,port:18897,database:db,objects:{},scanner:{}});await new Promise<void>(r=>server.listen(18897,'127.0.0.1',r));assert.equal(await request('localhost:18897'),403);
+  await db.transaction(c.org,conn=>conn.query('DELETE FROM rate_limits'));
+  server=createApplication({...c,codespaces:false,port:18897,database:db,objects:{},scanner:{}});await new Promise<void>(r=>server.listen(18897,'127.0.0.1',r));assert.equal(await request('localhost:18897'),403);assert.equal(await request(new URL(c.origin).host,'/api/login','POST','http://localhost:18897','same-origin'),403);
  }finally{if(server)await new Promise<void>(r=>server.close(r));await db.close();rmSync(dir,{recursive:true,force:true})}
 });

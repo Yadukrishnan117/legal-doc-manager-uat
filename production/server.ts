@@ -24,6 +24,10 @@ export function createApplication(options: any) {
         res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
         if (secure)
             res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+        // Codespaces rewrites matching public origins to loopback. Fetch Metadata is
+        // browser-controlled; require same-origin for this narrow UAT-only case.
+        const codespacesProxy = options.codespaces===true&&options.uat===true&&!options.production;
+        const sameOrigin = req.headers.origin===origin || (codespacesProxy && req.headers.origin==='http://localhost:'+options.port && req.headers['sec-fetch-site']==='same-origin');
         const cookies = Object.fromEntries((req.headers.cookie || '').split(';').filter(Boolean).map(x => x.trim().split('=')));
         try {
             if (req.headers.host !== new URL(origin).host && !(options.codespaces===true&&options.uat===true&&!options.production&&['localhost','127.0.0.1','[::1]','localhost:'+options.port,'127.0.0.1:'+options.port,'[::1]:'+options.port].includes(req.headers.host)) && !(options.uat&&req.headers.host==='healthcheck.railway.app'&&req.method==='GET'&&['/health/live','/health/ready'].includes(url.pathname)))
@@ -103,7 +107,7 @@ export function createApplication(options: any) {
                 return;
             }
             if (req.method === 'POST' && url.pathname === '/api/login') {
-                if (req.headers.origin !== origin)
+                if (!sameOrigin)
                     fail(403, 'Same-origin request required');
                 if (options.passwordLogin !== true || options.production)
                     fail(403, 'Use Google Workspace sign-in');
@@ -113,7 +117,7 @@ export function createApplication(options: any) {
                 return json(200, { user: session.user, csrf: session.csrf });
             }
             if(req.method==='POST'&&url.pathname==='/api/password-recovery'){
-                if(req.headers.origin!==origin)fail(403,'Same-origin request required');
+                if(!sameOrigin)fail(403,'Same-origin request required');
                 const result=await resetWithRecoveryCode(store,b,options);
                 res.setHeader('Set-Cookie',cookie(sessionName,'',0));
                 return json(200,result);
@@ -127,7 +131,7 @@ export function createApplication(options: any) {
                 }
                 ;
                 actor = session.user;res.actor=actor;
-                if (!['GET', 'HEAD'].includes(req.method || '') && (req.headers.origin !== origin || req.headers['x-csrf-token'] !== session.csrf))
+                if (!['GET', 'HEAD'].includes(req.method || '') && (!sameOrigin || req.headers['x-csrf-token'] !== session.csrf))
                     fail(403, 'Request verification failed. Refresh and retry.');
                 const u = actor, p = url.pathname, m = req.method;
                 const localPasswords=options.passwordLogin===true&&!options.production;
