@@ -86,3 +86,14 @@ These accounts are currently associated with the Codespaces dataset. They must n
 - Reviewed GitHub's official hosting and lifecycle documentation.
 
 Replacement-host deployment, migrated-data validation and cross-device testing remain pending. This report does not claim that the hosting issue has been fully resolved.
+
+
+## Update: GitHub Pages demo authorized, 19 November 2026
+
+The owner has now explicitly approved a static GitHub Pages demo in this same repository, with Sales, Legal and Operations views. This supersedes the earlier request for a full backend deployment on GitHub alone for the immediate testing scope.
+
+Prepared `pages-demo/index.html`, `.github/workflows/pages-demo.yml` and `docs/GITHUB_PAGES_DEMO.md`. Only the demo directory is uploaded as the Pages artifact. The public UI explicitly states that there is no login/shared database and that fictional changes reset on reload. The backend, credentials, runtime files and real documents are not website artifacts. No placeholder custom domain has been added; the demo supports a project subpath or future custom-domain root.
+
+Local verification: JavaScript syntax passed; Sales common-draft selection and client-copy preparation worked; Legal and Operations views rendered; reload restored sample state; phone layout checked at 390 × 844. Screenshots retained locally.
+
+Publication is currently blocked: GitHub's Pages creation endpoint returned HTTP 422, “Your current plan does not support GitHub Pages for this repository.” The repository is still private and Pages remains disabled. The owner must either activate a plan supporting private-repository Pages or explicitly authorize making the entire repository and its history public. No such repository-visibility change has been made. No live Pages URL is claimed.
